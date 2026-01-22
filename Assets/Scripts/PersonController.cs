@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(Rigidbody))]
 public class PersonController: MonoBehaviour
@@ -6,18 +7,33 @@ public class PersonController: MonoBehaviour
   private InputSystem_Actions _inputSystem;
   private Rigidbody _rb;
   private Vector2 _moveInputValue;
+  private bool _isGrounded;
 
   [Header("Movement Settings")]
   [SerializeField] private float _moveSpeed = 5f;
   [SerializeField] private Transform _cameraTransform;
+
+  [Header("Jumping Settings")]
+  [SerializeField] private float _jumpForce = 7f;
+  [SerializeField] private LayerMask _groundLayer;
+  [SerializeField] private float _groudCheckDistance = 0.3f;
+  
 
   private void Awake() {
     _inputSystem = new();
     _rb = GetComponent<Rigidbody>();
   }
 
-  private void OnEnable() => _inputSystem.Player.Enable();
-  private void OnDisable() => _inputSystem.Player.Disable();
+  private void OnEnable() {
+    _inputSystem.Player.Enable();
+    _inputSystem.Player.Jump.performed += HandleJump;
+  }
+
+  private void OnDisable() {
+    _inputSystem.Player.Jump.performed -= HandleJump;
+    _inputSystem.Player.Disable();
+  }
+
   private void Update() => _moveInputValue = _inputSystem.Player.Move.ReadValue<Vector2>();
   private void FixedUpdate() => MovePlayer();
 
@@ -41,5 +57,28 @@ public class PersonController: MonoBehaviour
       Quaternion targetRotation = Quaternion.LookRotation(desiredMoveDirection);
       _rb.MoveRotation(Quaternion.Slerp(_rb.rotation, targetRotation, 10f * Time.fixedDeltaTime));
     } 
+  }
+
+  private void HandleJump(InputAction.CallbackContext ctx)
+  {
+    Vector3 rayStart = transform.position + Vector3.up * 0.1f;
+    float rayDistance = 0.5f;
+
+    _isGrounded = Physics.Raycast(rayStart, Vector3.down, rayDistance, _groundLayer, QueryTriggerInteraction.Ignore);
+
+    Debug.DrawRay(rayStart, Vector3.down * rayDistance, _isGrounded ? Color.green : Color.red, 1f);
+    Debug.Log($"Grounded: {_isGrounded}");
+
+    if (_isGrounded)
+    {
+      _rb.linearVelocity = new Vector3(_rb.linearVelocity.x, 0, _rb.linearVelocity.z);
+      _rb.AddForce(Vector3.up * _jumpForce, ForceMode.Impulse);
+    }
+  }
+
+  private void OnDrawGizmosSelected()
+  {
+    Gizmos.color = Color.red;
+    Gizmos.DrawLine(transform.position, transform.position + Vector3.down * _groudCheckDistance);
   }
 }
