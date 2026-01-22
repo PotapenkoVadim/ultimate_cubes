@@ -54,10 +54,11 @@ public class ThirdPersonCamera : MonoBehaviour
       float normalizeScrollValue = scrollValue.y * 100f;
       _distance -= normalizeScrollValue;
       _distance = Mathf.Clamp(_distance, 5, 25);
-        
-      Debug.Log($"Y: {normalizeScrollValue}");
     }
   }
 
-  private void DecreaseScrollFrames() => _scrollFrameLock -= 1;
+  private void DecreaseScrollFrames() {
+    if (_scrollFrameLock > 0)
+      _scrollFrameLock -= 1;
+  }
 }
